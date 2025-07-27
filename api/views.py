@@ -16,37 +16,47 @@ from api.serializers import (
     TrabajoSerializer
 )
 
+from rest_framework.permissions import IsAuthenticated
+
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
+    permission_classes = [IsAuthenticated]
 
 class EstadoViewSet(viewsets.ModelViewSet):
     queryset = Estado.objects.all()
     serializer_class = EstadoSerializer
+    permission_classes = [IsAuthenticated]
 
 class FacturaViewSet(viewsets.ModelViewSet):
     queryset = Factura.objects.all()
     serializer_class = FacturaSerializer
+    permission_classes = [IsAuthenticated]
 
 class ProformaViewSet(viewsets.ModelViewSet):
     queryset = Proforma.objects.all()
     serializer_class = ProformaSerializer
+    permission_classes = [IsAuthenticated]
 
 class LocalizacionTrabajoViewSet(viewsets.ModelViewSet):
     queryset = LocalizacionTrabajo.objects.all()
     serializer_class = LocalizacionTrabajoSerializer
+    permission_classes = [IsAuthenticated]
 
 class TarifaViewSet(viewsets.ModelViewSet):
     queryset = Tarifa.objects.all()
     serializer_class = TarifaSerializer
+    permission_classes = [IsAuthenticated]
 
 class TarifaClienteViewSet(viewsets.ModelViewSet):
     queryset = TarifaCliente.objects.all()
     serializer_class = TarifaClienteSerializer
+    permission_classes = [IsAuthenticated]
 
 class TrabajoViewSet(viewsets.ModelViewSet):
     queryset = Trabajo.objects.all()
     serializer_class = TrabajoSerializer
+    permission_classes = [IsAuthenticated]
 
 
 # ---------- LOGIN / LOGOUT ----------
