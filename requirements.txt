@@ -1,4 +1,7 @@
-Django>=4.2,<5.0
-psycopg2-binary
-djangorestframework
-django-cors-headers
+asgiref==3.9.1
+Django==4.2.23
+django-cors-headers==4.7.0
+djangorestframework==3.16.0
+psycopg2-binary==2.9.10
+python-dotenv==1.1.1
+sqlparse==0.5.3
