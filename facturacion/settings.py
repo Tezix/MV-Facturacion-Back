@@ -26,7 +26,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY'),
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'mvfacturacion.netlify.app']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'mvfacturacion.netlify.app', 'mv-facturacion-back.onrender.com']
 
 
 
@@ -60,6 +60,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://mvfacturacion.netlify.app",
+    "https://mv-facturacion-back.onrender.com",
+    
 ]
 
 CORS_ALLOW_CREDENTIALS = True
