@@ -32,6 +32,11 @@ class TarifaSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class TarifaClienteSerializer(serializers.ModelSerializer):
+    tarifa = serializers.SlugRelatedField(
+        slug_field='nombre_trabajo',
+        queryset=Tarifa.objects.all()
+    )
+
     class Meta:
         model = TarifaCliente
         fields = '__all__'
