@@ -64,6 +64,12 @@ CORS_ALLOWED_ORIGINS = [
     
 ]
 
+# Agrega los orígenes confiables para CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "https://mv-facturacion-back.onrender.com",
+    "https://mvfacturacion.netlify.app",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 # Para cookies
 SESSION_COOKIE_AGE = 2592000  # 30 días
