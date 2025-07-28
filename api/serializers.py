@@ -12,6 +12,11 @@ class EstadoSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class FacturaSerializer(serializers.ModelSerializer):
+
+    cliente = serializers.SlugRelatedField(
+        slug_field='nombre',
+        queryset=Cliente.objects.all()
+    )
     class Meta:
         model = Factura
         fields = '__all__'
@@ -37,6 +42,10 @@ class TarifaClienteSerializer(serializers.ModelSerializer):
         queryset=Tarifa.objects.all()
     )
 
+    cliente = serializers.SlugRelatedField(
+        slug_field='nombre',
+        queryset=Cliente.objects.all()
+    )
     class Meta:
         model = TarifaCliente
         fields = '__all__'
