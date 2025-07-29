@@ -14,8 +14,8 @@ from api.serializers import (
     FacturaSerializer,
     ProformaSerializer,
     LocalizacionReparacionSerializer,
-    TarifaSerializer,
-    TarifaClienteSerializer,
+    TrabajoSerializer,
+    TrabajoClienteSerializer,
     ReparacionSerializer
 )
 
@@ -70,7 +70,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                         'id': r.id,
                         'fecha': r.fecha,
                         'localizacion': str(r.localizacion),
-                        'tarifa': str(r.tarifa),
+                        'trabajo': str(r.trabajo),
                     } for r in reparaciones
                 ]
             })
@@ -81,19 +81,59 @@ class ProformaViewSet(viewsets.ModelViewSet):
     serializer_class = ProformaSerializer
     permission_classes = [IsAuthenticated]
 
+    @action(detail=True, methods=['post'], url_path='asignar-reparaciones')
+    def asignar_reparaciones(self, request, pk=None):
+        proforma = self.get_object()
+        reparaciones_ids = request.data.get('reparaciones', [])
+        reparaciones = Reparacion.objects.filter(id__in=reparaciones_ids)
+        reparaciones.update(proforma=proforma)
+        from api.serializers import ReparacionSerializer
+        reparaciones_actualizadas = ReparacionSerializer(reparaciones, many=True).data
+        return Response({'success': True, 'reparaciones_actualizadas': reparaciones_actualizadas})
+
+    @action(detail=False, methods=['get'], url_path='con-reparaciones')
+    def con_reparaciones(self, request):
+        proformas = Proforma.objects.all()
+        data = []
+        for proforma in proformas:
+            reparaciones = Reparacion.objects.filter(proforma=proforma)
+            serializer = ProformaSerializer(proforma)
+            total = serializer.data.get('total', 0)
+            # Formato del número de proforma: PF/0001/2025
+            numero = f"PF/{str(proforma.numero_proforma).zfill(4)}/{proforma.fecha.year}" if hasattr(proforma, 'numero_proforma') and proforma.numero_proforma and hasattr(proforma, 'fecha') and proforma.fecha else None
+            data.append({
+                'id': proforma.id,
+                'numero_proforma': numero,
+                'cliente': proforma.cliente.id if proforma.cliente else None,
+                'cliente_nombre': proforma.cliente.nombre if proforma.cliente else None,
+                'fecha': proforma.fecha,
+                'estado': proforma.estado.id if proforma.estado else None,
+                'estado_nombre': proforma.estado.nombre if proforma.estado else None,
+                'total': total,
+                'reparaciones': [
+                    {
+                        'id': r.id,
+                        'fecha': r.fecha,
+                        'localizacion': str(r.localizacion),
+                        'trabajo': str(r.trabajo),
+                    } for r in reparaciones
+                ]
+            })
+        return Response(data)
+
 class LocalizacionReparacionViewSet(viewsets.ModelViewSet):
     queryset = LocalizacionReparacion.objects.all()
     serializer_class = LocalizacionReparacionSerializer
     permission_classes = [IsAuthenticated]
 
-class TarifaViewSet(viewsets.ModelViewSet):
-    queryset = Tarifa.objects.all()
-    serializer_class = TarifaSerializer
+class TrabajoViewSet(viewsets.ModelViewSet):
+    queryset = Trabajo.objects.all()
+    serializer_class = TrabajoSerializer
     permission_classes = [IsAuthenticated]
 
-class TarifaClienteViewSet(viewsets.ModelViewSet):
-    queryset = TarifaCliente.objects.all()
-    serializer_class = TarifaClienteSerializer
+class TrabajoClienteViewSet(viewsets.ModelViewSet):
+    queryset = TrabajoCliente.objects.all()
+    serializer_class = TrabajoClienteSerializer
     permission_classes = [IsAuthenticated]
 
 
@@ -105,14 +145,14 @@ class ReparacionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        tarifas = request.data.get('tarifas')
-        if tarifas and isinstance(tarifas, list):
+        trabajos = request.data.get('trabajos')
+        if trabajos and isinstance(trabajos, list):
             reparaciones = []
             errors = []
-            for tarifa_id in tarifas:
+            for trabajo_id in trabajos:
                 data = request.data.copy()
-                data['tarifa_id'] = tarifa_id
-                data.pop('tarifas', None)
+                data['trabajo_id'] = trabajo_id
+                data.pop('trabajos', None)
                 serializer = self.get_serializer(data=data)
                 if serializer.is_valid():
                     self.perform_create(serializer)
@@ -128,7 +168,7 @@ class ReparacionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='agrupados')
     def agrupados(self, request):
         # Agrupar reparaciones por fecha y localizacion
-        reparaciones = Reparacion.objects.all().select_related('localizacion', 'tarifa')
+        reparaciones = Reparacion.objects.all().select_related('localizacion', 'trabajo')
         grupos = {}
         for r in reparaciones:
             key = (str(r.fecha), r.localizacion.id)
@@ -141,10 +181,10 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                     'factura': r.factura.id if r.factura else None,
                     'factura_numero': r.factura.numero_factura if r.factura else None,
                     'proforma': r.proforma.id if r.proforma else None,
-                    'tarifas': [],
+                    'trabajos': [],
                     'reparacion_ids': [],
                 }
-            grupos[key]['tarifas'].append(TarifaSerializer(r.tarifa).data)
+            grupos[key]['trabajos'].append(TrabajoSerializer(r.trabajo).data)
             grupos[key]['reparacion_ids'].append(r.id)
         return Response(list(grupos.values()))
 

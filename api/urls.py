@@ -8,8 +8,8 @@ router.register(r'estados', EstadoViewSet)
 router.register(r'facturas', FacturaViewSet)
 router.register(r'proformas', ProformaViewSet)
 router.register(r'localizaciones_reparaciones', LocalizacionReparacionViewSet)
-router.register(r'tarifas', TarifaViewSet)
-router.register(r'tarifas_clientes', TarifaClienteViewSet)
+router.register(r'trabajos', TrabajoViewSet)
+router.register(r'trabajos_clientes', TrabajoClienteViewSet)
 router.register(r'reparaciones', ReparacionViewSet)
 
 urlpatterns = [

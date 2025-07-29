@@ -5,8 +5,8 @@ from .models import (
     Factura,
     Proforma,
     LocalizacionReparacion,
-    Tarifa,
-    TarifaCliente,
+    Trabajo,
+    TrabajoCliente,
     Reparacion
 )
 
@@ -15,7 +15,7 @@ admin.site.register(Estado)
 admin.site.register(Factura)
 admin.site.register(Proforma)
 admin.site.register(LocalizacionReparacion)
-admin.site.register(Tarifa)
-admin.site.register(TarifaCliente)
+admin.site.register(Trabajo)
+admin.site.register(TrabajoCliente)
 admin.site.register(Reparacion)
 
