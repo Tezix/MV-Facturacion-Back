@@ -77,6 +77,31 @@ class FacturaViewSet(viewsets.ModelViewSet):
         return Response(data)
 
 class ProformaViewSet(viewsets.ModelViewSet):
+    @action(detail=True, methods=['post'], url_path='convertir-a-factura')
+    def convertir_a_factura(self, request, pk=None):
+        from api.models import Factura, Reparacion
+        from api.serializers import FacturaSerializer
+        proforma = self.get_object()
+        # Crear la nueva factura con los datos de la proforma
+        factura = Factura.objects.create(
+            cliente=proforma.cliente,
+            fecha=proforma.fecha,
+            estado=proforma.estado
+        )
+        # Asociar la nueva factura a las reparaciones relacionadas con la proforma
+        reparaciones = Reparacion.objects.filter(proforma=proforma)
+        reparaciones.update(factura=factura)
+        # No desasociar la proforma de las reparaciones, mantener ambas relaciones
+        # Asociar la factura creada a la proforma
+        proforma.factura = factura
+        proforma.save()
+        # Serializar la nueva factura
+        factura_data = FacturaSerializer(factura).data
+        return Response({
+            'success': True,
+            'factura': factura_data,
+            'reparaciones_actualizadas': [r.id for r in reparaciones]
+        })
     queryset = Proforma.objects.all()
     serializer_class = ProformaSerializer
     permission_classes = [IsAuthenticated]
@@ -99,11 +124,11 @@ class ProformaViewSet(viewsets.ModelViewSet):
             reparaciones = Reparacion.objects.filter(proforma=proforma)
             serializer = ProformaSerializer(proforma)
             total = serializer.data.get('total', 0)
-            # Formato del número de proforma: PF/0001/2025
-            numero = f"PF/{str(proforma.numero_proforma).zfill(4)}/{proforma.fecha.year}" if hasattr(proforma, 'numero_proforma') and proforma.numero_proforma and hasattr(proforma, 'fecha') and proforma.fecha else None
             data.append({
                 'id': proforma.id,
-                'numero_proforma': numero,
+                'numero_proforma': proforma.numero_proforma,
+                'factura': proforma.factura.id if proforma.factura else None,
+                'factura_numero': proforma.factura.numero_factura if proforma.factura else None,
                 'cliente': proforma.cliente.id if proforma.cliente else None,
                 'cliente_nombre': proforma.cliente.nombre if proforma.cliente else None,
                 'fecha': proforma.fecha,
@@ -181,6 +206,7 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                     'factura': r.factura.id if r.factura else None,
                     'factura_numero': r.factura.numero_factura if r.factura else None,
                     'proforma': r.proforma.id if r.proforma else None,
+                    'proforma_numero': r.proforma.numero_proforma if r.proforma else None,
                     'trabajos': [],
                     'reparacion_ids': [],
                 }

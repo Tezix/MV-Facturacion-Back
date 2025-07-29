@@ -55,13 +55,14 @@ class Proforma(models.Model):
             last_proforma = Proforma.objects.filter(fecha__year=current_year).order_by('-numero_proforma').first()
             if last_proforma and last_proforma.numero_proforma:
                 try:
-                    last_number = int(last_proforma.numero_proforma.split('/')[0])
+                    # extract the numeric sequence part, which is the second segment
+                    last_number = int(last_proforma.numero_proforma.split('/')[1])
                 except Exception:
                     last_number = 0
             else:
                 last_number = 0
             next_number = str(last_number + 1).zfill(4)
-            self.numero_proforma = f"{next_number}/{current_year}"
+            self.numero_proforma = f"PF/{next_number}/{current_year}"
         super().save(*args, **kwargs)
     fecha = models.DateField()
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
