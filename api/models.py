@@ -21,10 +21,25 @@ class Estado(models.Model):
     
 class Factura(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    numero_factura = models.CharField(max_length=100)
+    numero_factura = models.CharField(max_length=100, editable=False, unique=True)
     fecha = models.DateField()
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        from datetime import date
+        if not self.numero_factura:
+            current_year = date.today().year
+            last_factura = Factura.objects.filter(fecha__year=current_year).order_by('-numero_factura').first()
+            if last_factura and last_factura.numero_factura:
+                try:
+                    last_number = int(last_factura.numero_factura.split('/')[0])
+                except Exception:
+                    last_number = 0
+            else:
+                last_number = 0
+            next_number = str(last_number + 1).zfill(4)
+            self.numero_factura = f"{next_number}/{current_year}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.numero_factura}, {self.cliente}"
@@ -32,16 +47,32 @@ class Factura(models.Model):
 class Proforma(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     factura = models.ForeignKey(Factura, on_delete=models.SET_NULL, null=True, blank=True)
-    numero_proforma = models.CharField(max_length=100)
+    numero_proforma = models.CharField(max_length=100, editable=False, unique=True)
+    def save(self, *args, **kwargs):
+        from datetime import date
+        if not self.numero_proforma:
+            current_year = date.today().year
+            last_proforma = Proforma.objects.filter(fecha__year=current_year).order_by('-numero_proforma').first()
+            if last_proforma and last_proforma.numero_proforma:
+                try:
+                    last_number = int(last_proforma.numero_proforma.split('/')[0])
+                except Exception:
+                    last_number = 0
+            else:
+                last_number = 0
+            next_number = str(last_number + 1).zfill(4)
+            self.numero_proforma = f"{next_number}/{current_year}"
+        super().save(*args, **kwargs)
     fecha = models.DateField()
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
     total = models.DecimalField(max_digits=10, decimal_places=2)
 
+
 class Tarifa(models.Model):
-    nombre_trabajo = models.CharField(max_length=255)
+    nombre_reparacion = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.nombre_trabajo}"
+        return f"{self.nombre_reparacion}"
 
 class TarifaCliente(models.Model):
     tarifa = models.ForeignKey(Tarifa, on_delete=models.CASCADE)
@@ -52,7 +83,8 @@ class TarifaCliente(models.Model):
         return f"A {self.cliente} se le cobra {self.precio} por {self.tarifa}"
     
 
-class LocalizacionTrabajo(models.Model):
+
+class LocalizacionReparacion(models.Model):
     direccion = models.CharField(max_length=255)
     numero = models.IntegerField()
     localidad = models.CharField(max_length=255)
@@ -61,10 +93,11 @@ class LocalizacionTrabajo(models.Model):
         return f"{self.direccion}, {self.numero}, {self.localidad}"
     
 
-class Trabajo(models.Model):
+
+class Reparacion(models.Model):
     factura = models.ForeignKey(Factura, on_delete=models.SET_NULL, null=True, blank=True)
     proforma = models.ForeignKey(Proforma, on_delete=models.SET_NULL, null=True, blank=True)
-    localizacion = models.ForeignKey(LocalizacionTrabajo, on_delete=models.CASCADE)
+    localizacion = models.ForeignKey(LocalizacionReparacion, on_delete=models.CASCADE)
     tarifa = models.ForeignKey(Tarifa, on_delete=models.CASCADE)
     fecha = models.DateField()
     num_reparacion = models.CharField(max_length=100, null=True, blank=True)
