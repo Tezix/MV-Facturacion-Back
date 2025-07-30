@@ -125,6 +125,49 @@ class FacturaViewSet(viewsets.ModelViewSet):
         return response
 
 class ProformaViewSet(viewsets.ModelViewSet):
+    @action(detail=True, methods=['get'], url_path='exportar')
+    def exportar(self, request, pk=None):
+        proforma = self.get_object()
+        reparaciones = Reparacion.objects.filter(proforma=proforma)
+        # Agrupar por (num_reparacion, localizacion)
+        grupos = {}
+        for r in reparaciones:
+            key = (r.num_reparacion, r.localizacion)
+            if key not in grupos:
+                grupos[key] = {
+                    'num_reparacion': r.num_reparacion,
+                    'localizacion': str(r.localizacion),
+                    'trabajos': [],
+                    'total': 0,
+                }
+            grupos[key]['trabajos'].append(r.trabajo)
+            grupos[key]['total'] += float(r.trabajo.precio)
+        reparaciones_agrupadas = list(grupos.values())
+        # Calcular total general
+        total = sum(g['total'] for g in reparaciones_agrupadas)
+        # Cargar logo e incrustar como base64
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.webp')
+        try:
+            with open(logo_path, 'rb') as img_f:
+                logo_data = 'data:image/webp;base64,' + base64.b64encode(img_f.read()).decode('utf-8')
+        except FileNotFoundError:
+            logo_data = None
+        # Renderizar plantilla HTML
+        html_string = render_to_string('factura.html', {
+            'factura': proforma,  # reutilizamos la plantilla, pero es una proforma
+            'reparaciones_agrupadas': reparaciones_agrupadas,
+            'total': total,
+            'logo_data': logo_data,
+            'es_proforma': True,  # para distinguir en la plantilla
+        })
+        # Generar PDF con WeasyPrint
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        css_path = os.path.join(settings.BASE_DIR, 'static/css/factura.css')
+        pdf = html.write_pdf(stylesheets=[CSS(filename=css_path)])
+        # Devolver como respuesta descargable
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="proforma_{proforma.numero_proforma}.pdf"'
+        return response
     @action(detail=True, methods=['post'], url_path='convertir-a-factura')
     def convertir_a_factura(self, request, pk=None):
         from api.models import Factura, Reparacion

@@ -4,7 +4,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Factura {{ factura.numero_factura }}</title>
+    <title>{% if es_proforma %}Proforma {{ factura.numero_proforma }}{% else %}Factura {{ factura.numero_factura }}{% endif %}</title>
     <link rel="stylesheet" href="{% static 'css/factura.css' %}">
 </head>
 <body>
@@ -15,7 +15,11 @@
             {% endif %}
         </div>
         <div class="header-factura-title">
-            <h2><strong>FACTURA</strong> {{ factura.numero_factura }}</h2>
+            {% if es_proforma %}
+                <h2><strong>PROFORMA</strong> {{ factura.numero_proforma }}</h2>
+            {% else %}
+                <h2><strong>FACTURA</strong> {{ factura.numero_factura }}</h2>
+            {% endif %}
             <h2><strong>FECHA</strong> {{ factura.fecha|date:"d/m/Y" }}</h2>
         </div>
     </div>
@@ -45,7 +49,7 @@
         <table>
             <thead>
                 <tr>
-                    <th class="reparacion">NºREPARACION</th>
+                    <th class="reparacion">Nº REPARACION</th>
                     <th class="direccion">DIRECCIÓN</th>
                     <th class="total">TOTAL</th>
                 </tr>
@@ -72,7 +76,12 @@
                     </td>
                 </tr>
                 <tr>
+                    {% if es_proforma %}
+                    <td><h3 class="no-wrap">EN CASO DE ACEPTAR ESTA PROFORMA, SE ENVIARÁ LA FACTURA</h3></td>
+                    {% else %}
                     <td><h3 class="no-wrap">METODO DE PAGO:TRANSFERENCIA BANCARIA</h3></td>
+                    {% endif %}
+
                     <td class="subtotal-label">
                         <div class="subtotal">
                         IVA 21%
@@ -83,7 +92,12 @@
                     </td>
                 </tr>
                 <tr>
+                    {% if es_proforma %}
+                    <td><h3 class="no-wrap">ESTA PROFORMA ES VÁLIDA DURANTE 30 DÍAS</h3></td>
+                    {% else %}
                     <td><h3 class="no-wrap">Nº DE CUENTA: ES80 0182 6081 2202 0164 7324</h3></td>
+                    {% endif %}
+
                 </tr>
                 <tr>
                     <td></td>
