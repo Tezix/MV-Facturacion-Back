@@ -1,0 +1,107 @@
+{% load static %}
+{% load euro_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Factura {{ factura.numero_factura }}</title>
+    <link rel="stylesheet" href="{% static 'css/factura.css' %}">
+</head>
+<body>
+    <div class="header-factura">
+        <div>
+            {% if logo_data %}
+                <img src="{{ logo_data }}" alt="Logo" style="max-width: 200px; height: auto;">
+            {% endif %}
+        </div>
+        <div class="header-factura-title">
+            <h2><strong>FACTURA</strong> {{ factura.numero_factura }}</h2>
+            <h2><strong>FECHA</strong> {{ factura.fecha|date:"d/m/Y" }}</h2>
+        </div>
+    </div>
+    <div class="company-client-factura">
+        <div class="company-client-title-factura-datos-cliente">
+            <h2><strong>DATOS DEL CLIENTE</strong></h2>
+        </div>
+        <div class="company-client-title-factura-datos-empresa">
+            <h2><strong>DATOS DE LA EMPRESA</strong></h2>
+        </div>
+    </div>
+    <div class="company-client-info-factura">
+        <div class="datos-cliente">
+            <h3>{{ factura.cliente.nombre }}</h3>
+            <h3>{{ factura.cliente.direccion }},  {{ factura.cliente.numero }}</h3>
+            <h3>{{ factura.cliente.cp }} {{ factura.cliente.localidad }}</h3>
+            <h3>{{ factura.cliente.cif }}</h3>
+        </div>
+        <div class="datos-empresa">
+            <h3>TECMOVAL PROYECTOS SLU</h3>
+            <h3>CALLE XIPRERS 13-20</h3>
+            <h3>46015 VALENCIA</h3>
+            <h3>B75278671</h3>
+        </div>
+    </div>
+    <div class="trabajos-factura">
+        <table>
+            <thead>
+                <tr>
+                    <th class="reparacion">NºREPARACION</th>
+                    <th class="direccion">DIRECCIÓN</th>
+                    <th class="total">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grupo in reparaciones_agrupadas %}
+                <tr>
+                    <td>{{ grupo.num_reparacion }}</td>
+                    <td>{{ grupo.localizacion|upper }}</td>
+                    <td class="euro-total">{{ grupo.total|euro }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td></td>
+                    <td class="subtotal-label">
+                        <div class="subtotal">
+                        SUBTOTAL
+                        </div>
+                    </td>
+                    <td class="euro-total">
+                        <h2 style="margin-right: 5px;">{{ total|euro }}</h2>
+                    </td>
+                </tr>
+                <tr>
+                    <td><h3 class="no-wrap">METODO DE PAGO:TRANSFERENCIA BANCARIA</h3></td>
+                    <td class="subtotal-label">
+                        <div class="subtotal">
+                        IVA 21%
+                        </div>
+                    </td>
+                    <td class="euro-total">
+                        <h2 style="margin-right: 5px;">{{ total|multiply:0.21|euro }}</h2>
+                    </td>
+                </tr>
+                <tr>
+                    <td><h3 class="no-wrap">Nº DE CUENTA: ES80 0182 6081 2202 0164 7324</h3></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td class="subtotal-label">
+                        <div class="subtotal">
+                        TOTAL
+                        </div>
+                    </td>
+                    <td class="euro-total">
+                        <h2 style="margin-right: 5px;">{{ total|multiply:0.21|add:total|euro }}</h2>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <div class="footer-factura">
+        <h6>
+            De conformidad con lo dispuesto en el Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo, de 27 de abril de 2016, y en la Ley Orgánica 3/2018, de 5 de diciembre, de Protección de Datos Personales y Garantía de los Derechos Digitales, le informamos que los datos personales proporcionados en esta factura serán tratados con la finalidad de gestionar la relación comercial y cumplir con las obligaciones contractuales y legales. Estos datos no serán cedidos a terceros salvo en los casos en que exista una obligación legal. Usted tiene derecho a acceder, rectificar, suprimir y oponerse al tratamiento de sus datos, así como otros derechos reconocidos en la normativa, dirigiéndose a TECMOVAL PROYECTOS SLU a través del correo electrónico m.villanueva@mvascensores.com o en la dirección C/ Xiprers 13-20, Valencia.
+        </h6>
+</body>
+</html>

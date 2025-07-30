@@ -20,6 +20,11 @@ from api.serializers import (
 )
 
 from rest_framework.permissions import IsAuthenticated
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML, CSS
+import os, base64
+from django.conf import settings
 
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
@@ -75,6 +80,49 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 ]
             })
         return Response(data)
+    
+    @action(detail=True, methods=['get'], url_path='exportar')
+    def exportar(self, request, pk=None):
+        factura = self.get_object()
+        reparaciones = Reparacion.objects.filter(factura=factura)
+        # Agrupar por (num_reparacion, localizacion)
+        grupos = {}
+        for r in reparaciones:
+            key = (r.num_reparacion, r.localizacion)
+            if key not in grupos:
+                grupos[key] = {
+                    'num_reparacion': r.num_reparacion,
+                    'localizacion': str(r.localizacion),
+                    'trabajos': [],
+                    'total': 0,
+                }
+            grupos[key]['trabajos'].append(r.trabajo)
+            grupos[key]['total'] += float(r.trabajo.precio)
+        reparaciones_agrupadas = list(grupos.values())
+        # Calcular total general
+        total = sum(g['total'] for g in reparaciones_agrupadas)
+        # Cargar logo e incrustar como base64
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.webp')
+        try:
+            with open(logo_path, 'rb') as img_f:
+                logo_data = 'data:image/webp;base64,' + base64.b64encode(img_f.read()).decode('utf-8')
+        except FileNotFoundError:
+            logo_data = None
+        # Renderizar plantilla HTML
+        html_string = render_to_string('factura.html', {
+            'factura': factura,
+            'reparaciones_agrupadas': reparaciones_agrupadas,
+            'total': total,
+            'logo_data': logo_data,
+        })
+        # Generar PDF con WeasyPrint
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        css_path = os.path.join(settings.BASE_DIR, 'static/css/factura.css')
+        pdf = html.write_pdf(stylesheets=[CSS(filename=css_path)])
+        # Devolver como respuesta descargable
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="factura_{factura.numero_factura}.pdf"'
+        return response
 
 class ProformaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='convertir-a-factura')

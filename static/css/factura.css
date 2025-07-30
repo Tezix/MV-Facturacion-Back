@@ -1,0 +1,135 @@
+/* Ajustar márgenes de página para WeasyPrint */
+@page {
+  size: A4;
+  margin: 0;
+}
+body  { 
+    font-family: Arial, sans-serif; 
+    margin: 20px; 
+}
+
+
+table > thead > tr {
+    background-color: rgb(33,169,237) !important;
+    color: white !important;
+}
+
+h2 { 
+    font-size: 16px; 
+    margin: 0;
+    padding: 0;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+h3 {
+    font-size: 14px; 
+    margin: 0;
+    padding: 0;
+    font-weight: 200;
+}
+
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+tbody td {
+  border: 1px solid #ccc;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.header-factura { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 20px; }
+.header-factura img { max-width: 150px; height: auto; }
+
+.company-client-factura {
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 8px; 
+    background-color: rgb(33,169,237);
+}
+.company-client-info-factura { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+.company-client-info-factura div { 
+    margin-bottom: 10px; 
+}
+
+.company-client-title-factura-datos-cliente{
+    margin-left: 10px;
+    color: white;
+}
+.company-client-title-factura-datos-empresa{
+    margin-right: 10px;
+    color: white;
+}
+
+.header-factura-title {
+    margin-right: 20px;
+}
+
+
+.trabajos-factura {
+    width: 100vw; 
+    margin-left: calc(-1 * (100vw - 100%) / 2); 
+}
+
+.trabajos-factura table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.trabajos-factura .reparacion {
+    width: 20%;
+    text-align: center;
+}
+.trabajos-factura .direccion {
+    width: 60%;
+    text-align: center;
+}
+.trabajos-factura .total {
+    width: 20%;
+    text-align: center;
+}
+
+.euro-total {
+    text-align: right !important;
+
+}
+
+.subtotal-label {
+    text-align: right !important;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.subtotal {
+    text-align: start !important;
+    font-weight: bold;
+    background-color: rgb(33,169,237);
+    color: white;
+    padding: 2px 8px;
+    width: 100px !important;
+}
+
+.no-wrap {
+  white-space: nowrap;
+}
+
+.footer-factura {
+    margin-top: 20px;
+    font-size: 13px;
+    font-weight: 100;
+    position: fixed;
+    bottom: 0;
+    left: 20px;
+    right: 20px;
+    width: auto;
+}
