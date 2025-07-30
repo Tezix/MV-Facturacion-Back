@@ -66,6 +66,7 @@ class ProformaSerializer(serializers.ModelSerializer):
         return total
 
 class LocalizacionReparacionSerializer(serializers.ModelSerializer):
+    ascensor = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     class Meta:
         model = LocalizacionReparacion
         fields = '__all__'

@@ -88,11 +88,12 @@ class TrabajoCliente(models.Model):
 class LocalizacionReparacion(models.Model):
     direccion = models.CharField(max_length=255)
     numero = models.IntegerField()
-    localidad = models.CharField(max_length=255)
+    ascensor = models.CharField(max_length=20, null=True, blank=True)
+    localidad = models.CharField(max_length=50)
 
     def __str__(self):
-        return f"{self.direccion}, {self.numero}"
-    
+        return f"{self.direccion}, {self.numero}, {self.ascensor}"
+
 
 
 class Reparacion(models.Model):
