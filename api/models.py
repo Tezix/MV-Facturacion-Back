@@ -88,7 +88,8 @@ class TrabajoCliente(models.Model):
 class LocalizacionReparacion(models.Model):
     direccion = models.CharField(max_length=255)
     numero = models.IntegerField()
-    ascensor = models.CharField(max_length=20, null=True, blank=True)
+    ascensor = models.CharField(max_length=20, default=1, blank=True)
+    escalera = models.CharField(max_length=20, null=True, blank=True)
     localidad = models.CharField(max_length=50)
 
     def __str__(self):

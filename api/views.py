@@ -93,6 +93,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 grupos[key] = {
                     'num_reparacion': r.num_reparacion,
                     'localizacion': str(r.localizacion),
+                    'ascensor': r.localizacion.ascensor if hasattr(r.localizacion, 'ascensor') else '',
+                    'escalera': r.localizacion.escalera if hasattr(r.localizacion, 'escalera') else '',
                     'trabajos': [],
                     'total': 0,
                 }
@@ -137,6 +139,8 @@ class ProformaViewSet(viewsets.ModelViewSet):
                 grupos[key] = {
                     'num_reparacion': r.num_reparacion,
                     'localizacion': str(r.localizacion),
+                    'ascensor': r.localizacion.ascensor if hasattr(r.localizacion, 'ascensor') else '',
+                    'escalera': r.localizacion.escalera if hasattr(r.localizacion, 'escalera') else '',
                     'trabajos': [],
                     'total': 0,
                 }

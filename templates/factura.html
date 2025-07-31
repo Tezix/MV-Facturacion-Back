@@ -51,6 +51,8 @@
                 <tr>
                     <th class="reparacion">Nº REPARACION</th>
                     <th class="direccion">DIRECCIÓN</th>
+                    <th class="ascensor">ASCENSOR</th>
+                    <th class="escalera">ESCALERA</th>
                     <th class="total">TOTAL</th>
                 </tr>
             </thead>
@@ -59,6 +61,8 @@
                 <tr>
                     <td>{{ grupo.num_reparacion }}</td>
                     <td>{{ grupo.localizacion|upper }}</td>
+                    <td>{{ grupo.ascensor }}</td>
+                    <td>{{ grupo.escalera }}</td>
                     <td class="euro-total">{{ grupo.total|euro }}</td>
                 </tr>
                 {% endfor %}
