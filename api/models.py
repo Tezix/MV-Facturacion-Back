@@ -93,7 +93,16 @@ class LocalizacionReparacion(models.Model):
     localidad = models.CharField(max_length=50)
 
     def __str__(self):
-        return f"{self.direccion}, {self.numero}, {self.ascensor}"
+        partes = []
+        if self.direccion:
+            partes.append(str(self.direccion))
+        if self.numero:
+            partes.append(str(self.numero))
+        if hasattr(self, 'ascensor') and self.ascensor:
+            partes.append(f"Asc {self.ascensor}")
+        if hasattr(self, 'escalera') and self.escalera:
+            partes.append(f"{self.escalera}")
+        return ', '.join(partes)
 
 
 
