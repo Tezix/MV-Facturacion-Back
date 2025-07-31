@@ -57,7 +57,41 @@ class FacturaViewSet(viewsets.ModelViewSet):
         facturas = Factura.objects.all()
         data = []
         for factura in facturas:
-            reparaciones = Reparacion.objects.filter(factura=factura)
+            reparaciones = Reparacion.objects.filter(factura=factura).select_related('localizacion', 'trabajo')
+            # Agrupar reparaciones por (num_reparacion, localizacion)
+            grupos = {}
+            for r in reparaciones:
+                key = (r.num_reparacion, r.localizacion.id)
+                if key not in grupos:
+                    grupos[key] = {
+                        'id': r.id,
+                        'fecha': r.fecha,
+                        'num_reparacion': r.num_reparacion,
+                        'num_pedido': r.num_pedido,
+                        'localizacion': str(r.localizacion),
+                        'localizacion_obj': {
+                            'id': r.localizacion.id,
+                            'direccion': r.localizacion.direccion,
+                            'numero': r.localizacion.numero,
+                            'ascensor': getattr(r.localizacion, 'ascensor', None),
+                            'escalera': getattr(r.localizacion, 'escalera', None),
+                            'localidad': r.localizacion.localidad,
+                        },
+                        'trabajos': [],
+                    }
+                # Buscar precio personalizado para el cliente y trabajo
+                precio = None
+                try:
+                    from api.models import TrabajoCliente
+                    trabajo_cliente = TrabajoCliente.objects.get(cliente=factura.cliente, trabajo=r.trabajo)
+                    precio = float(trabajo_cliente.precio)
+                except TrabajoCliente.DoesNotExist:
+                    precio = float(r.trabajo.precio)
+                grupos[key]['trabajos'].append({
+                    'id': r.trabajo.id,
+                    'nombre_reparacion': r.trabajo.nombre_reparacion,
+                    'precio': precio,
+                })
             # Usar el serializer para obtener el total calculado
             serializer = FacturaSerializer(factura)
             total = serializer.data.get('total', 0)
@@ -70,14 +104,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 'estado': factura.estado.id,
                 'estado_nombre': factura.estado.nombre,
                 'total': total,
-                'reparaciones': [
-                    {
-                        'id': r.id,
-                        'fecha': r.fecha,
-                        'localizacion': str(r.localizacion),
-                        'trabajo': str(r.trabajo),
-                    } for r in reparaciones
-                ]
+                'reparaciones': list(grupos.values())
             })
         return Response(data)
     
@@ -212,7 +239,40 @@ class ProformaViewSet(viewsets.ModelViewSet):
         proformas = Proforma.objects.all()
         data = []
         for proforma in proformas:
-            reparaciones = Reparacion.objects.filter(proforma=proforma)
+            reparaciones = Reparacion.objects.filter(proforma=proforma).select_related('localizacion', 'trabajo')
+            grupos = {}
+            for r in reparaciones:
+                key = (r.num_reparacion, r.localizacion.id)
+                if key not in grupos:
+                    grupos[key] = {
+                        'id': r.id,
+                        'fecha': r.fecha,
+                        'num_reparacion': r.num_reparacion,
+                        'num_pedido': r.num_pedido,
+                        'localizacion': str(r.localizacion),
+                        'localizacion_obj': {
+                            'id': r.localizacion.id,
+                            'direccion': r.localizacion.direccion,
+                            'numero': r.localizacion.numero,
+                            'ascensor': getattr(r.localizacion, 'ascensor', None),
+                            'escalera': getattr(r.localizacion, 'escalera', None),
+                            'localidad': r.localizacion.localidad,
+                        },
+                        'trabajos': [],
+                    }
+                # Buscar precio personalizado para el cliente y trabajo
+                precio = None
+                try:
+                    from api.models import TrabajoCliente
+                    trabajo_cliente = TrabajoCliente.objects.get(cliente=proforma.cliente, trabajo=r.trabajo)
+                    precio = float(trabajo_cliente.precio)
+                except TrabajoCliente.DoesNotExist:
+                    precio = float(r.trabajo.precio)
+                grupos[key]['trabajos'].append({
+                    'id': r.trabajo.id,
+                    'nombre_reparacion': r.trabajo.nombre_reparacion,
+                    'precio': precio,
+                })
             serializer = ProformaSerializer(proforma)
             total = serializer.data.get('total', 0)
             data.append({
@@ -226,14 +286,7 @@ class ProformaViewSet(viewsets.ModelViewSet):
                 'estado': proforma.estado.id if proforma.estado else None,
                 'estado_nombre': proforma.estado.nombre if proforma.estado else None,
                 'total': total,
-                'reparaciones': [
-                    {
-                        'id': r.id,
-                        'fecha': r.fecha,
-                        'localizacion': str(r.localizacion),
-                        'trabajo': str(r.trabajo),
-                    } for r in reparaciones
-                ]
+                'reparaciones': list(grupos.values())
             })
         return Response(data)
 
