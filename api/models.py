@@ -22,6 +22,8 @@ class Estado(models.Model):
 class Factura(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     numero_factura = models.CharField(max_length=100, editable=False, unique=True)
+    # Archivo PDF generado de la factura
+    pdf_file = models.FileField(upload_to='facturas_pdfs/', null=True, blank=True)
     fecha = models.DateField()
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
 

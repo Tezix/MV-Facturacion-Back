@@ -150,6 +150,13 @@ class FacturaViewSet(viewsets.ModelViewSet):
         html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
         css_path = os.path.join(settings.BASE_DIR, 'static/css/factura.css')
         pdf = html.write_pdf(stylesheets=[CSS(filename=css_path)])
+        # Guardar PDF generado en el modelo
+        from django.core.files.base import ContentFile
+        factura.pdf_file.save(
+            f"factura_{factura.numero_factura}.pdf",
+            ContentFile(pdf),
+            save=True
+        )
         # Devolver como respuesta descargable
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="factura_{factura.numero_factura}.pdf"'

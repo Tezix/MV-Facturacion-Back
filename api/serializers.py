@@ -18,10 +18,12 @@ class FacturaSerializer(serializers.ModelSerializer):
     total = serializers.SerializerMethodField(read_only=True)
     # Nombre del cliente para mostrar en dashboard
     cliente_nombre = serializers.SerializerMethodField(read_only=True)
+    cliente_email = serializers.SerializerMethodField(read_only=True)
+    pdf_url = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Factura
         fields = '__all__'
-        extra_fields = ['cliente_nombre']
+        extra_fields = ['cliente_nombre', 'cliente_email', 'pdf_url']
 
     def get_total(self, obj):
         # Obtener todas las reparaciones asociadas a esta factura
@@ -44,6 +46,16 @@ class FacturaSerializer(serializers.ModelSerializer):
     def get_cliente_nombre(self, obj):
         # Retorna el nombre del cliente asociado
         return obj.cliente.nombre if obj.cliente else None
+    
+    def get_cliente_email(self, obj):
+        # Retorna el email del cliente asociado
+        return obj.cliente.email if obj.cliente and hasattr(obj.cliente, 'email') else None
+    def get_pdf_url(self, obj):
+        request = self.context.get('request')
+        if obj.pdf_file:
+            url = obj.pdf_file.url
+            return request.build_absolute_uri(url) if request else url
+        return None
 
 class ProformaSerializer(serializers.ModelSerializer):
     cliente = serializers.PrimaryKeyRelatedField(
