@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from api.models import *
+import os
 
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,10 +52,11 @@ class FacturaSerializer(serializers.ModelSerializer):
         # Retorna el email del cliente asociado
         return obj.cliente.email if obj.cliente and hasattr(obj.cliente, 'email') else None
     def get_pdf_url(self, obj):
-        request = self.context.get('request')
+        # Construir URL completa usando variable de entorno API_BASE_URL
         if obj.pdf_file:
             url = obj.pdf_file.url
-            return request.build_absolute_uri(url) if request else url
+            base = os.environ.get('API_BASE_URL', '')
+            return f"{base}{url}"
         return None
 
 class ProformaSerializer(serializers.ModelSerializer):
