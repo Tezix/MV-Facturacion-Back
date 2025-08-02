@@ -25,6 +25,7 @@ from django.http import HttpResponse
 from weasyprint import HTML, CSS
 import os, base64
 from django.conf import settings
+from django.core.files.base import ContentFile
 
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
@@ -154,6 +155,55 @@ class FacturaViewSet(viewsets.ModelViewSet):
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="factura_{factura.numero_factura}.pdf"'
         return response
+    
+    @action(detail=True, methods=['post'], url_path='generar-pdf')
+    def generar_pdf(self, request, pk=None):
+        """
+        Genera el PDF de la factura, lo guarda en el campo pdf_file, y devuelve los datos actualizados.
+        """
+        factura = self.get_object()
+        # Agrupar reparaciones como en exportar
+        reparaciones = Reparacion.objects.filter(factura=factura)
+        grupos = {}
+        for r in reparaciones:
+            key = (r.num_reparacion, r.localizacion)
+            if key not in grupos:
+                grupos[key] = {
+                    'num_reparacion': r.num_reparacion,
+                    'num_pedido': r.num_pedido,
+                    'localizacion': str(r.localizacion),
+                    'trabajos': [],
+                    'total': 0,
+                }
+            grupos[key]['trabajos'].append(r.trabajo)
+            grupos[key]['total'] += float(r.trabajo.precio)
+        reparaciones_agrupadas = list(grupos.values())
+        tiene_num_pedido = any(g.get('num_pedido') for g in reparaciones_agrupadas)
+        total = sum(g['total'] for g in reparaciones_agrupadas)
+        # Cargar logo
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.webp')
+        try:
+            with open(logo_path, 'rb') as img_f:
+                logo_data = 'data:image/webp;base64,' + base64.b64encode(img_f.read()).decode('utf-8')
+        except FileNotFoundError:
+            logo_data = None
+        # Renderizar HTML
+        html_string = render_to_string('factura.html', {
+            'factura': factura,
+            'reparaciones_agrupadas': reparaciones_agrupadas,
+            'total': total,
+            'logo_data': logo_data,
+            'tiene_num_pedido': tiene_num_pedido,
+        })
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        css_path = os.path.join(settings.BASE_DIR, 'static/css/factura.css')
+        pdf_bytes = html.write_pdf(stylesheets=[CSS(filename=css_path)])
+        # Guardar PDF en el campo
+        filename = f"factura_{factura.numero_factura}.pdf"
+        factura.pdf_file.save(filename, ContentFile(pdf_bytes), save=True)
+        # Devolver datos actualizados (pasar request para construir URL completa)
+        serializer = FacturaSerializer(factura, context={'request': request})
+        return Response(serializer.data)
 
 class ProformaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='exportar')
@@ -203,6 +253,50 @@ class ProformaViewSet(viewsets.ModelViewSet):
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="proforma_{proforma.numero_proforma}.pdf"'
         return response
+    @action(detail=True, methods=['post'], url_path='generar-pdf')
+    def generar_pdf(self, request, pk=None):
+        """
+        Genera el PDF de la proforma, lo guarda en el campo pdf_file, y devuelve los datos actualizados.
+        """
+        proforma = self.get_object()
+        reparaciones = Reparacion.objects.filter(proforma=proforma)
+        grupos = {}
+        for r in reparaciones:
+            key = (r.num_reparacion, r.localizacion)
+            if key not in grupos:
+                grupos[key] = {
+                    'num_reparacion': r.num_reparacion,
+                    'num_pedido': r.num_pedido,
+                    'localizacion': str(r.localizacion),
+                    'trabajos': [],
+                    'total': 0,
+                }
+            grupos[key]['trabajos'].append(r.trabajo)
+            grupos[key]['total'] += float(r.trabajo.precio)
+        reparaciones_agrupadas = list(grupos.values())
+        tiene_num_pedido = any(g.get('num_pedido') for g in reparaciones_agrupadas)
+        total = sum(g['total'] for g in reparaciones_agrupadas)
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.webp')
+        try:
+            with open(logo_path, 'rb') as img_f:
+                logo_data = 'data:image/webp;base64,' + base64.b64encode(img_f.read()).decode('utf-8')
+        except FileNotFoundError:
+            logo_data = None
+        html_string = render_to_string('factura.html', {
+            'factura': proforma,
+            'reparaciones_agrupadas': reparaciones_agrupadas,
+            'total': total,
+            'logo_data': logo_data,
+            'es_proforma': True,
+            'tiene_num_pedido': tiene_num_pedido,
+        })
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        css_path = os.path.join(settings.BASE_DIR, 'static/css/factura.css')
+        pdf_bytes = html.write_pdf(stylesheets=[CSS(filename=css_path)])
+        filename = f"proforma_{proforma.numero_proforma}.pdf"
+        proforma.pdf_file.save(filename, ContentFile(pdf_bytes), save=True)
+        serializer = ProformaSerializer(proforma, context={'request': request})
+        return Response(serializer.data)
     @action(detail=True, methods=['post'], url_path='convertir-a-factura')
     def convertir_a_factura(self, request, pk=None):
         from api.models import Factura, Reparacion

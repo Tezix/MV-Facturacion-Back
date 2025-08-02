@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from api.models import *
-import os
 
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,6 +24,8 @@ class FacturaSerializer(serializers.ModelSerializer):
         model = Factura
         fields = '__all__'
         extra_fields = ['cliente_nombre', 'cliente_email', 'pdf_url']
+        # Evitar escritura de archivos PDF desde cliente
+        read_only_fields = ['pdf_file', 'pdf_url']
 
     def get_total(self, obj):
         # Obtener todas las reparaciones asociadas a esta factura
@@ -52,11 +53,10 @@ class FacturaSerializer(serializers.ModelSerializer):
         # Retorna el email del cliente asociado
         return obj.cliente.email if obj.cliente and hasattr(obj.cliente, 'email') else None
     def get_pdf_url(self, obj):
-        # Construir URL completa usando variable de entorno API_BASE_URL
+        request = self.context.get('request')
         if obj.pdf_file:
             url = obj.pdf_file.url
-            base = os.environ.get('API_BASE_URL', '')
-            return f"{base}{url}"
+            return request.build_absolute_uri(url) if request else url
         return None
 
 class ProformaSerializer(serializers.ModelSerializer):
@@ -66,10 +66,16 @@ class ProformaSerializer(serializers.ModelSerializer):
     total = serializers.SerializerMethodField(read_only=True)
     # Nombre del cliente para mostrar en dashboard
     cliente_nombre = serializers.SerializerMethodField(read_only=True)
+    # Email del cliente y URL para descargar PDF de la proforma
+    cliente_email = serializers.SerializerMethodField(read_only=True)
+    pdf_url = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Proforma
         fields = '__all__'
-        extra_fields = ['cliente_nombre']
+        extra_fields = ['cliente_nombre', 'cliente_email', 'pdf_url']
+        # Evitar escritura de campos de PDF desde cliente
+        read_only_fields = ['cliente_email', 'pdf_url', 'pdf_file']
 
     def get_total(self, obj):
         # Obtener todas las reparaciones asociadas a esta proforma
@@ -92,6 +98,16 @@ class ProformaSerializer(serializers.ModelSerializer):
     def get_cliente_nombre(self, obj):
         # Retorna el nombre del cliente asociado
         return obj.cliente.nombre if obj.cliente else None
+    def get_cliente_email(self, obj):
+        # Retorna el email del cliente asociado
+        return obj.cliente.email if obj.cliente and hasattr(obj.cliente, 'email') else None
+    def get_pdf_url(self, obj):
+        """Retorna la URL absoluta al archivo PDF de la proforma"""
+        request = self.context.get('request')
+        if obj.pdf_file:
+            url = obj.pdf_file.url
+            return request.build_absolute_uri(url) if request else url
+        return None
 
 class LocalizacionReparacionSerializer(serializers.ModelSerializer):
     ascensor = serializers.CharField(allow_blank=True, allow_null=True, required=False)

@@ -50,6 +50,8 @@ class Proforma(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     factura = models.ForeignKey(Factura, on_delete=models.SET_NULL, null=True, blank=True)
     numero_proforma = models.CharField(max_length=100, editable=False, unique=True)
+    # Archivo PDF generado de la proforma
+    pdf_file = models.FileField(upload_to='proformas_pdfs/', null=True, blank=True)
     def save(self, *args, **kwargs):
         from datetime import date
         if not self.numero_proforma:
