@@ -98,10 +98,10 @@ class LocalizacionReparacion(models.Model):
             partes.append(str(self.direccion))
         if self.numero:
             partes.append(str(self.numero))
+        if hasattr(self, 'escalera') and self.escalera:
+            partes.append(f"Esc {self.escalera}")
         if hasattr(self, 'ascensor') and self.ascensor:
             partes.append(f"Asc {self.ascensor}")
-        if hasattr(self, 'escalera') and self.escalera:
-            partes.append(f"{self.escalera}")
         return ', '.join(partes)
 
 
@@ -114,6 +114,7 @@ class Reparacion(models.Model):
     fecha = models.DateField()
     num_reparacion = models.CharField(max_length=100, null=True, blank=True)
     num_pedido = models.CharField(max_length=100, null=True, blank=True)
+    comentarios = models.TextField(null=True, blank=True)
 
     def __str__(self):
         factura_str = self.factura.numero_factura if self.factura else "Sin factura"

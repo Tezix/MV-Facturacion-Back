@@ -46,10 +46,11 @@
         </div>
     </div>
     <div class="trabajos-factura">
-        <table>
+        <table class="tabla-factura">
             <thead>
                 <tr>
                     <th class="reparacion">Nº REPARACION</th>
+                    {% if tiene_num_pedido %}<th class="pedido">Nº PEDIDO</th>{% endif %}
                     <th class="direccion">DIRECCIÓN</th>
                     <th class="total">TOTAL</th>
                 </tr>
@@ -58,11 +59,16 @@
                 {% for grupo in reparaciones_agrupadas %}
                 <tr>
                     <td>{{ grupo.num_reparacion }}</td>
+                    {% if tiene_num_pedido %}<td>{{ grupo.num_pedido }}</td>{% endif %}
                     <td>{{ grupo.localizacion|upper }}</td>
                     <td class="euro-total">{{ grupo.total|euro }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
+        </table>
+    </div>
+    <div class="footer-factura">
+         <table class="tabla-factura-footer">
             <tfoot>
                 <tr>
                     <td></td>
@@ -112,8 +118,6 @@
                 </tr>
             </tfoot>
         </table>
-    </div>
-    <div class="footer-factura">
         <h6>
             De conformidad con lo dispuesto en el Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo, de 27 de abril de 2016, y en la Ley Orgánica 3/2018, de 5 de diciembre, de Protección de Datos Personales y Garantía de los Derechos Digitales, le informamos que los datos personales proporcionados en esta factura serán tratados con la finalidad de gestionar la relación comercial y cumplir con las obligaciones contractuales y legales. Estos datos no serán cedidos a terceros salvo en los casos en que exista una obligación legal. Usted tiene derecho a acceder, rectificar, suprimir y oponerse al tratamiento de sus datos, así como otros derechos reconocidos en la normativa, dirigiéndose a TECMOVAL PROYECTOS SLU a través del correo electrónico m.villanueva@mvascensores.com o en la dirección C/ Xiprers 13-20, Valencia.
         </h6>

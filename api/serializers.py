@@ -16,9 +16,12 @@ class FacturaSerializer(serializers.ModelSerializer):
         queryset=Cliente.objects.all()
     )
     total = serializers.SerializerMethodField(read_only=True)
+    # Nombre del cliente para mostrar en dashboard
+    cliente_nombre = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Factura
         fields = '__all__'
+        extra_fields = ['cliente_nombre']
 
     def get_total(self, obj):
         # Obtener todas las reparaciones asociadas a esta factura
@@ -38,14 +41,21 @@ class FacturaSerializer(serializers.ModelSerializer):
                     total += float(reparacion.trabajo.precio or 0)
         return total
 
+    def get_cliente_nombre(self, obj):
+        # Retorna el nombre del cliente asociado
+        return obj.cliente.nombre if obj.cliente else None
+
 class ProformaSerializer(serializers.ModelSerializer):
     cliente = serializers.PrimaryKeyRelatedField(
         queryset=Cliente.objects.all()
     )
     total = serializers.SerializerMethodField(read_only=True)
+    # Nombre del cliente para mostrar en dashboard
+    cliente_nombre = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Proforma
         fields = '__all__'
+        extra_fields = ['cliente_nombre']
 
     def get_total(self, obj):
         # Obtener todas las reparaciones asociadas a esta proforma
@@ -64,6 +74,10 @@ class ProformaSerializer(serializers.ModelSerializer):
                 if reparacion.trabajo and hasattr(reparacion.trabajo, 'precio'):
                     total += float(reparacion.trabajo.precio or 0)
         return total
+
+    def get_cliente_nombre(self, obj):
+        # Retorna el nombre del cliente asociado
+        return obj.cliente.nombre if obj.cliente else None
 
 class LocalizacionReparacionSerializer(serializers.ModelSerializer):
     ascensor = serializers.CharField(allow_blank=True, allow_null=True, required=False)
@@ -114,9 +128,10 @@ class ReparacionSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    comentarios = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     class Meta:
         model = Reparacion
         fields = '__all__'
-        extra_fields = ['localizacion_id', 'trabajo_id']
+        extra_fields = ['localizacion_id', 'trabajo_id', 'comentarios']
         # Para que DRF acepte los campos *_id en POST/PUT
         read_only_fields = []

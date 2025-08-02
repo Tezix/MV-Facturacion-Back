@@ -73,8 +73,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                             'id': r.localizacion.id,
                             'direccion': r.localizacion.direccion,
                             'numero': r.localizacion.numero,
-                            'ascensor': getattr(r.localizacion, 'ascensor', None),
                             'escalera': getattr(r.localizacion, 'escalera', None),
+                            'ascensor': getattr(r.localizacion, 'ascensor', None),
                             'localidad': r.localizacion.localidad,
                         },
                         'trabajos': [],
@@ -119,6 +119,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             if key not in grupos:
                 grupos[key] = {
                     'num_reparacion': r.num_reparacion,
+                    'num_pedido': r.num_pedido,
                     'localizacion': str(r.localizacion),
                     'trabajos': [],
                     'total': 0,
@@ -126,6 +127,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             grupos[key]['trabajos'].append(r.trabajo)
             grupos[key]['total'] += float(r.trabajo.precio)
         reparaciones_agrupadas = list(grupos.values())
+        # Detectar si hay algún num_pedido no vacío
+        tiene_num_pedido = any(g.get('num_pedido') for g in reparaciones_agrupadas)
         # Calcular total general
         total = sum(g['total'] for g in reparaciones_agrupadas)
         # Cargar logo e incrustar como base64
@@ -141,6 +144,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             'reparaciones_agrupadas': reparaciones_agrupadas,
             'total': total,
             'logo_data': logo_data,
+            'tiene_num_pedido': tiene_num_pedido,
         })
         # Generar PDF con WeasyPrint
         html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
@@ -163,6 +167,7 @@ class ProformaViewSet(viewsets.ModelViewSet):
             if key not in grupos:
                 grupos[key] = {
                     'num_reparacion': r.num_reparacion,
+                    'num_pedido': r.num_pedido,
                     'localizacion': str(r.localizacion),
                     'trabajos': [],
                     'total': 0,
@@ -170,6 +175,8 @@ class ProformaViewSet(viewsets.ModelViewSet):
             grupos[key]['trabajos'].append(r.trabajo)
             grupos[key]['total'] += float(r.trabajo.precio)
         reparaciones_agrupadas = list(grupos.values())
+        # Detectar si hay algún num_pedido no vacío
+        tiene_num_pedido = any(g.get('num_pedido') for g in reparaciones_agrupadas)
         # Calcular total general
         total = sum(g['total'] for g in reparaciones_agrupadas)
         # Cargar logo e incrustar como base64
@@ -186,6 +193,7 @@ class ProformaViewSet(viewsets.ModelViewSet):
             'total': total,
             'logo_data': logo_data,
             'es_proforma': True,  # para distinguir en la plantilla
+            'tiene_num_pedido': tiene_num_pedido,
         })
         # Generar PDF con WeasyPrint
         html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
@@ -254,8 +262,8 @@ class ProformaViewSet(viewsets.ModelViewSet):
                             'id': r.localizacion.id,
                             'direccion': r.localizacion.direccion,
                             'numero': r.localizacion.numero,
-                            'ascensor': getattr(r.localizacion, 'ascensor', None),
                             'escalera': getattr(r.localizacion, 'escalera', None),
+                            'ascensor': getattr(r.localizacion, 'ascensor', None),
                             'localidad': r.localizacion.localidad,
                         },
                         'trabajos': [],
@@ -315,6 +323,7 @@ class ReparacionViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         trabajos = request.data.get('trabajos')
+        comentarios = request.data.get('comentarios', None)
         if trabajos and isinstance(trabajos, list):
             reparaciones = []
             errors = []
@@ -322,6 +331,8 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                 data = request.data.copy()
                 data['trabajo_id'] = trabajo_id
                 data.pop('trabajos', None)
+                if comentarios is not None:
+                    data['comentarios'] = comentarios
                 serializer = self.get_serializer(data=data)
                 if serializer.is_valid():
                     self.perform_create(serializer)
@@ -353,6 +364,7 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                     'proforma_numero': r.proforma.numero_proforma if r.proforma else None,
                     'trabajos': [],
                     'reparacion_ids': [],
+                    'comentarios': r.comentarios,
                 }
             grupos[key]['trabajos'].append(TrabajoSerializer(r.trabajo).data)
             grupos[key]['reparacion_ids'].append(r.id)

@@ -4,7 +4,6 @@
   margin: 0;
 }
 body  { 
-    font-family: Arial, sans-serif; 
     margin: 20px; 
 }
 
@@ -82,19 +81,21 @@ tbody td {
 
 .trabajos-factura table {
     width: 100%;
-    table-layout: fixed;
 }
 
 .trabajos-factura .reparacion {
     width: 20%;
     text-align: center;
 }
+.trabajos-factura .pedido {
+    width: 15%;
+    text-align: center;
+}
 .trabajos-factura .direccion {
-    width: 60%;
     text-align: center;
 }
 .trabajos-factura .total {
-    width: 20%;
+    width: 15%;
     text-align: center;
 }
 
