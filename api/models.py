@@ -43,6 +43,16 @@ class Factura(models.Model):
             self.numero_factura = f"{next_number}/{current_year}"
         super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        # Solo permitir eliminar la última factura creada (número más alto)
+        from django.core.exceptions import ValidationError
+        current_year = self.fecha.year
+        # Buscar la última factura del año de esta factura
+        last_factura = Factura.objects.filter(fecha__year=current_year).order_by('-numero_factura').first()
+        if not last_factura or last_factura.pk != self.pk:
+            raise ValidationError("Solo se puede eliminar la última factura creada.")
+        super().delete(*args, **kwargs)
+
     def __str__(self):
         return f"{self.numero_factura}, {self.cliente}"
 
@@ -68,6 +78,15 @@ class Proforma(models.Model):
             next_number = str(last_number + 1).zfill(4)
             self.numero_proforma = f"PF/{next_number}/{current_year}"
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Solo permitir eliminar la última proforma creada (número más alto)
+        from django.core.exceptions import ValidationError
+        current_year = self.fecha.year
+        last_proforma = Proforma.objects.filter(fecha__year=current_year).order_by('-numero_proforma').first()
+        if not last_proforma or last_proforma.pk != self.pk:
+            raise ValidationError("Solo se puede eliminar la última proforma creada.")
+        super().delete(*args, **kwargs)
     fecha = models.DateField()
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
 
