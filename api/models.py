@@ -94,6 +94,7 @@ class Proforma(models.Model):
 class Trabajo(models.Model):
     nombre_reparacion = models.CharField(max_length=255)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
+    especial = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.nombre_reparacion}"
@@ -133,7 +134,7 @@ class Reparacion(models.Model):
     factura = models.ForeignKey(Factura, on_delete=models.SET_NULL, null=True, blank=True)
     proforma = models.ForeignKey(Proforma, on_delete=models.SET_NULL, null=True, blank=True)
     localizacion = models.ForeignKey(LocalizacionReparacion, on_delete=models.CASCADE)
-    trabajo = models.ForeignKey(Trabajo, on_delete=models.CASCADE)
+    trabajo = models.ForeignKey(Trabajo, on_delete=models.CASCADE, null=True, blank=True)
     fecha = models.DateField()
     num_reparacion = models.CharField(max_length=100, null=True, blank=True)
     num_pedido = models.CharField(max_length=100, null=True, blank=True)
@@ -143,3 +144,41 @@ class Reparacion(models.Model):
         factura_str = self.factura.numero_factura if self.factura else "Sin factura"
         proforma_str = self.proforma.numero_proforma if self.proforma else "Sin proforma"
         return f"{self.trabajo} en factura/proforma {factura_str}/{proforma_str} realizado en {self.localizacion} el {self.fecha}"
+    
+
+# Modelo para almacenar múltiples fotos de una reparación
+class ReparacionFoto(models.Model):
+    reparacion = models.ForeignKey(Reparacion, related_name='fotos', on_delete=models.CASCADE)
+    foto = models.ImageField(upload_to='fotos_reparacion/')
+
+    def __str__(self):
+        return f"Foto {self.id} de Reparacion {self.reparacion.id}"
+
+
+
+
+# MODELOS DE FACTURAS DE GASTOS
+
+class Gasto(models.Model):
+    nombre = models.CharField(max_length=255)
+    TIPOS_DEFAULT = [
+        'Suministros',
+        'Materiales',
+        'Servicios',
+        'Impuestos',
+        'Otros',
+    ]
+    tipo = models.CharField(max_length=50, choices=[(t, t) for t in TIPOS_DEFAULT])
+    ESTADOS_DEFAULT = [
+        'Pagada',
+        'Enviada',
+        'Pendiente de pago',
+    ]
+    estado = models.CharField(max_length=20, choices=[(e, e) for e in ESTADOS_DEFAULT], default='pendiente de pago')
+    fecha = models.DateField()
+    precio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    descripcion = models.TextField(blank=True, null=True)
+    archivo = models.FileField(upload_to='gastos_archivos/', null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.tipo}) - {self.fecha}"

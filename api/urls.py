@@ -11,8 +11,10 @@ router.register(r'localizaciones_reparaciones', LocalizacionReparacionViewSet)
 router.register(r'trabajos', TrabajoViewSet)
 router.register(r'trabajos_clientes', TrabajoClienteViewSet)
 router.register(r'reparaciones', ReparacionViewSet)
+router.register(r'gastos', GastoViewSet)
 
 urlpatterns = [
+    path('gastos/choices/', gasto_choices, name='gasto-choices'),
     path('', include(router.urls)),
     path('login/', LoginView.as_view()),
     path('logout/', LogoutView.as_view()),

@@ -1,3 +1,26 @@
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+# Endpoint para exponer los choices de tipo y estado de Gasto
+@api_view(['GET'])
+def gasto_choices(request):
+    from .models import Gasto
+    tipos = [t[0] for t in Gasto._meta.get_field('tipo').choices]
+    estados = [e[0] for e in Gasto._meta.get_field('estado').choices]
+    return Response({
+        'tipos': tipos,
+        'estados': estados,
+    })
+from api.models import Gasto
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+# --- CRUD de Gastos ---
+from .serializers import GastoSerializer
+
+class GastoViewSet(viewsets.ModelViewSet):
+    queryset = Gasto.objects.all()
+    serializer_class = GastoSerializer
+    permission_classes = [IsAuthenticated]
 from rest_framework.decorators import action
 from api.models import Reparacion, Factura
 from rest_framework.decorators import action
@@ -8,6 +31,8 @@ from django.contrib.auth import authenticate, login, logout
 from rest_framework.permissions import AllowAny
 from rest_framework.authtoken.models import Token
 from api.models import *
+from api.models import ReparacionFoto
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from api.serializers import (
     ClienteSerializer,
     EstadoSerializer,
@@ -16,7 +41,9 @@ from api.serializers import (
     LocalizacionReparacionSerializer,
     TrabajoSerializer,
     TrabajoClienteSerializer,
-    ReparacionSerializer
+    ReparacionSerializer,
+    ReparacionFotoSerializer,
+    GastoSerializer,
 )
 
 from rest_framework.permissions import IsAuthenticated
@@ -414,11 +441,25 @@ class ReparacionViewSet(viewsets.ModelViewSet):
     queryset = Reparacion.objects.all()
     serializer_class = ReparacionSerializer
     permission_classes = [IsAuthenticated]
+    # Allow JSON and multipart/form-data uploads
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def create(self, request, *args, **kwargs):
-        trabajos = request.data.get('trabajos')
+        # Obtener lista de trabajos desde JSON o multipart
+        if hasattr(request.data, 'getlist'):
+            trabajos_raw = request.data.getlist('trabajos')
+        else:
+            trabajos_raw = request.data.get('trabajos', [])
+        # Asegurar lista de valores
+        if isinstance(trabajos_raw, list):
+            trabajos = trabajos_raw
+        elif trabajos_raw is None:
+            trabajos = []
+        else:
+            trabajos = [trabajos_raw]
         comentarios = request.data.get('comentarios', None)
-        if trabajos and isinstance(trabajos, list):
+        # Si hay trabajos, crear múltiples reparaciones
+        if trabajos:
             reparaciones = []
             errors = []
             for trabajo_id in trabajos:
@@ -430,6 +471,10 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                 serializer = self.get_serializer(data=data)
                 if serializer.is_valid():
                     self.perform_create(serializer)
+                    # Attach uploaded fotos to this reparacion
+                    instance = serializer.instance
+                    for foto in request.FILES.getlist('fotos'):
+                        ReparacionFoto.objects.create(reparacion=instance, foto=foto)
                     reparaciones.append(serializer.data)
                 else:
                     errors.append(serializer.errors)
@@ -437,7 +482,31 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                 return Response({'errors': errors}, status=400)
             return Response(reparaciones, status=201)
         else:
-            return super().create(request, *args, **kwargs)
+            # For single reparacion, handle photo uploads
+            response = super().create(request, *args, **kwargs)
+            # Attach fotos if present
+            try:
+                instance = self.get_queryset().get(pk=response.data.get('id'))
+                for foto in request.FILES.getlist('fotos'):
+                    ReparacionFoto.objects.create(reparacion=instance, foto=foto)
+            except Exception:
+                pass
+            return response
+    
+    def update(self, request, *args, **kwargs):
+        # Override update to handle fotos
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        # Perform update on Reparacion fields
+        response = super().update(request, *args, **kwargs)
+        # Handle uploaded photos: replace existing if new ones provided
+        if 'fotos' in request.FILES:
+            # Delete old fotos
+            instance.fotos.all().delete()
+            # Create new fotos
+            for foto in request.FILES.getlist('fotos'):
+                ReparacionFoto.objects.create(reparacion=instance, foto=foto)
+        return response
 
     @action(detail=False, methods=['get'], url_path='agrupados')
     def agrupados(self, request):
@@ -462,7 +531,22 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                 }
             grupos[key]['trabajos'].append(TrabajoSerializer(r.trabajo).data)
             grupos[key]['reparacion_ids'].append(r.id)
-        return Response(list(grupos.values()))
+        # Note: the above return won't include fotos; to include fotos, rebuild response
+        # Agregar fotos por grupo
+        data = []
+        # Para cada grupo, obtener fotos con el serializer para foto_url
+        for group in grupos.values():
+            all_urls = []
+            for rid in group['reparacion_ids']:
+                fotos_qs = ReparacionFoto.objects.filter(reparacion_id=rid)
+                fotos_serialized = ReparacionFotoSerializer(fotos_qs, many=True, context={'request': request}).data
+                # Extraer foto_url de cada serializador
+                for item in fotos_serialized:
+                    if item.get('foto_url'):
+                        all_urls.append(item['foto_url'])
+            group['fotos'] = all_urls
+            data.append(group)
+        return Response(data)
 
 
 # ---------- LOGIN / LOGOUT ----------

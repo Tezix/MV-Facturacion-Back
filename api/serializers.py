@@ -1,3 +1,9 @@
+from api.models import Gasto
+from rest_framework import serializers
+class GastoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Gasto
+        fields = '__all__'
 from rest_framework import serializers
 from api.models import *
 
@@ -143,9 +149,26 @@ class TrabajoClienteSerializer(serializers.ModelSerializer):
         fields = '__all__'
         extra_fields = ['cliente_nombre', 'trabajo_nombre']
 
+class ReparacionFotoSerializer(serializers.ModelSerializer):
+    foto_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ReparacionFoto
+        fields = ['id', 'foto_url']
+
+    def get_foto_url(self, obj):
+        request = self.context.get('request')
+        if obj.foto:
+            url = obj.foto.url
+            return request.build_absolute_uri(url) if request else url
+        return None
+
 class ReparacionSerializer(serializers.ModelSerializer):
+    # Permitir formatos de fecha personalizados (dd/MM/yyyy y ISO)
+    fecha = serializers.DateField(input_formats=['%d/%m/%Y', 'iso-8601'])
     localizacion = LocalizacionReparacionSerializer(read_only=True)
     trabajo = TrabajoSerializer(read_only=True)
+    fotos = ReparacionFotoSerializer(many=True, read_only=True)
     localizacion_id = serializers.PrimaryKeyRelatedField(
         queryset=LocalizacionReparacion.objects.all(),
         source='localizacion',
@@ -162,6 +185,6 @@ class ReparacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reparacion
         fields = '__all__'
-        extra_fields = ['localizacion_id', 'trabajo_id', 'comentarios']
+        extra_fields = ['localizacion_id', 'trabajo_id', 'comentarios', 'fotos']
         # Para que DRF acepte los campos *_id en POST/PUT
         read_only_fields = []
