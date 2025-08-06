@@ -32,7 +32,7 @@ from django.contrib.auth import authenticate, login, logout
 from rest_framework.permissions import AllowAny
 from rest_framework.authtoken.models import Token
 from api.models import *
-from api.models import ReparacionFoto, TrabajosReparaciones
+from api.models import ReparacionFoto
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from api.serializers import (
     ClienteSerializer,
@@ -44,7 +44,6 @@ from api.serializers import (
     TrabajoClienteSerializer,
     ReparacionSerializer,
     ReparacionFotoSerializer,
-    TrabajosReparacionesSerializer,
     GastoSerializer,
 )
 
@@ -446,26 +445,19 @@ class ReparacionViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def create(self, request, *args, **kwargs):
-        # Obtener trabajos - CORREGIR para manejar múltiples valores
-        trabajos = []
+        # Obtener trabajos
         if hasattr(request.data, 'getlist'):
-            # Para FormData (multipart), usar getlist para obtener todos los valores
             trabajos_raw = request.data.getlist('trabajos')
-            for trabajo_id in trabajos_raw:
-                try:
-                    trabajos.append(int(trabajo_id))
-                except (ValueError, TypeError):
-                    continue
         else:
-            # Para JSON data
             trabajos_raw = request.data.get('trabajos', [])
-            if isinstance(trabajos_raw, list):
-                trabajos = [int(t) for t in trabajos_raw if str(t).isdigit()]
-            elif trabajos_raw:
-                try:
-                    trabajos = [int(trabajos_raw)]
-                except (ValueError, TypeError):
-                    trabajos = []
+        
+        # Asegurar lista de valores
+        if isinstance(trabajos_raw, list):
+            trabajos = trabajos_raw
+        elif trabajos_raw is None:
+            trabajos = []
+        else:
+            trabajos = [trabajos_raw]
         
         # Crear una sola reparación
         data = request.data.copy()
@@ -495,32 +487,22 @@ class ReparacionViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=400)
 
     def update(self, request, *args, **kwargs):
-        # Override update to handle fotos and trabajos
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
-        # Obtener trabajos del request - CORREGIR para manejar múltiples valores
-        trabajos = []
-        if hasattr(request.data, 'getlist'):
-            # Para FormData (multipart), usar getlist para obtener todos los valores
-            trabajos_raw = request.data.getlist('trabajos')
-            for trabajo_id in trabajos_raw:
-                try:
-                    trabajos.append(int(trabajo_id))
-                except (ValueError, TypeError):
-                    continue
+        # Obtener trabajos del request
+        trabajos_raw = request.data.get('trabajos', [])
+        if isinstance(trabajos_raw, str):
+            try:
+                trabajos = [int(trabajos_raw)]
+            except ValueError:
+                trabajos = []
+        elif hasattr(request.data, 'getlist'):
+            trabajos = request.data.getlist('trabajos')
         else:
-            # Para JSON data
-            trabajos_raw = request.data.get('trabajos', [])
-            if isinstance(trabajos_raw, list):
-                trabajos = [int(t) for t in trabajos_raw if str(t).isdigit()]
-            elif trabajos_raw:
-                try:
-                    trabajos = [int(trabajos_raw)]
-                except (ValueError, TypeError):
-                    trabajos = []
+            trabajos = trabajos_raw if isinstance(trabajos_raw, list) else []
         
-        # Actualizar los campos de la reparación (sin trabajos)
+        # Actualizar los campos de la reparación
         data = request.data.copy()
         data.pop('trabajos', None)  # Remover trabajos del data
         
@@ -541,27 +523,9 @@ class ReparacionViewSet(viewsets.ModelViewSet):
                     except Trabajo.DoesNotExist:
                         continue
             
-            # Handle fotos_a_mantener parameter for editing scenarios FIRST
-            fotos_a_mantener = request.data.get('fotos_a_mantener', [])
-            if fotos_a_mantener:
-                # Convert string IDs to integers if needed
-                if isinstance(fotos_a_mantener, str):
-                    fotos_a_mantener = [int(id.strip()) for id in fotos_a_mantener.split(',') if id.strip().isdigit()]
-                elif isinstance(fotos_a_mantener, list):
-                    fotos_a_mantener = [int(id) for id in fotos_a_mantener if str(id).isdigit()]
-                
-                # Delete fotos that are not in the list of fotos to keep
-                if fotos_a_mantener:
-                    instance.fotos.exclude(id__in=fotos_a_mantener).delete()
-                else:
-                    # If empty list, delete all existing fotos
-                    instance.fotos.all().delete()
-            
-            # Handle uploaded photos: add new ones AFTER managing existing ones
-            if 'fotos' in request.FILES:
-                # Only create new fotos, don't delete existing ones
-                for foto in request.FILES.getlist('fotos'):
-                    ReparacionFoto.objects.create(reparacion=instance, foto=foto)
+            # Manejar fotos nuevas (se agregan a las existentes)
+            for foto in request.FILES.getlist('fotos'):
+                ReparacionFoto.objects.create(reparacion=reparacion, foto=foto)
             
             # Devolver la reparación actualizada
             response_serializer = self.get_serializer(reparacion)
@@ -581,6 +545,193 @@ class ReparacionViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Foto no encontrada'}, status=404)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Obtener trabajos del request
+        trabajos_raw = request.data.get('trabajos', [])
+        if isinstance(trabajos_raw, str):
+            try:
+                trabajos = [int(trabajos_raw)]
+            except ValueError:
+                trabajos = []
+        elif hasattr(request.data, 'getlist'):
+            trabajos = request.data.getlist('trabajos')
+        else:
+            trabajos = trabajos_raw if isinstance(trabajos_raw, list) else []
+        
+        # Actualizar los campos de la reparación
+        data = request.data.copy()
+        data.pop('trabajos', None)  # Remover trabajos del data
+        
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        if serializer.is_valid():
+            reparacion = serializer.save()
+            
+            # Actualizar relaciones con trabajos
+            if 'trabajos' in request.data:  # Solo actualizar si se enviaron trabajos
+                # Eliminar relaciones existentes
+                instance.trabajos_reparaciones.all().delete()
+                
+                # Crear nuevas relaciones
+                for trabajo_id in trabajos:
+                    try:
+                        trabajo = Trabajo.objects.get(id=trabajo_id)
+                        TrabajosReparaciones.objects.create(reparacion=reparacion, trabajo=trabajo)
+                    except Trabajo.DoesNotExist:
+                        continue
+            
+            # Manejar fotos nuevas (se agregan a las existentes)
+            for foto in request.FILES.getlist('fotos'):
+                ReparacionFoto.objects.create(reparacion=reparacion, foto=foto)
+            
+            # Devolver la reparación actualizada
+            response_serializer = self.get_serializer(reparacion)
+            return Response(response_serializer.data)
+        else:
+            return Response(serializer.errors, status=400)
+                serializer = self.get_serializer(data=data)
+                if serializer.is_valid():
+                    self.perform_create(serializer)
+                    # Attach uploaded fotos to this reparacion
+                    instance = serializer.instance
+                    for foto in request.FILES.getlist('fotos'):
+                        ReparacionFoto.objects.create(reparacion=instance, foto=foto)
+                    
+                    # Transferir fotos existentes solo a la primera reparación para evitar duplicados
+                    if trabajo_id == trabajos[0] and fotos_existentes_paths:
+                        for foto_path, foto_name in fotos_existentes_paths:
+                            if foto_path and os.path.exists(foto_path):
+                                try:
+                                    with open(foto_path, 'rb') as f:
+                                        from django.core.files import File
+                                        foto_file = File(f)
+                                        foto_file.name = foto_name
+                                        ReparacionFoto.objects.create(reparacion=instance, foto=foto_file)
+                                except Exception as e:
+                                    print(f"Error transfiriendo foto: {e}")
+                    
+                    reparaciones.append(serializer.data)
+                else:
+                    errors.append(serializer.errors)
+            if errors:
+                return Response({'errors': errors}, status=400)
+            return Response(reparaciones, status=201)
+        else:
+            # For single reparacion, handle photo uploads
+            response = super().create(request, *args, **kwargs)
+            # Attach fotos if present
+            try:
+                instance = self.get_queryset().get(pk=response.data.get('id'))
+                for foto in request.FILES.getlist('fotos'):
+                    ReparacionFoto.objects.create(reparacion=instance, foto=foto)
+                
+                # Transferir fotos existentes si las hay
+                if fotos_existentes_paths:
+                    for foto_path, foto_name in fotos_existentes_paths:
+                        if foto_path and os.path.exists(foto_path):
+                            try:
+                                with open(foto_path, 'rb') as f:
+                                    from django.core.files import File
+                                    foto_file = File(f)
+                                    foto_file.name = foto_name
+                                    ReparacionFoto.objects.create(reparacion=instance, foto=foto_file)
+                            except Exception as e:
+                                print(f"Error transfiriendo foto: {e}")
+            except Exception:
+                pass
+            return response
+    
+    def update(self, request, *args, **kwargs):
+        # Override update to handle fotos
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        # Perform update on Reparacion fields
+        response = super().update(request, *args, **kwargs)
+        
+        # Handle uploaded photos: add new ones without deleting existing
+        if 'fotos' in request.FILES:
+            # Only create new fotos, don't delete existing ones
+            for foto in request.FILES.getlist('fotos'):
+                ReparacionFoto.objects.create(reparacion=instance, foto=foto)
+        
+        # Handle fotos_a_mantener parameter for editing scenarios
+        fotos_a_mantener = request.data.get('fotos_a_mantener', [])
+        if fotos_a_mantener:
+            # Convert string IDs to integers if needed
+            if isinstance(fotos_a_mantener, str):
+                fotos_a_mantener = [int(id.strip()) for id in fotos_a_mantener.split(',') if id.strip().isdigit()]
+            elif isinstance(fotos_a_mantener, list):
+                fotos_a_mantener = [int(id) for id in fotos_a_mantener if str(id).isdigit()]
+            
+            # Delete fotos that are not in the list of fotos to keep
+            if fotos_a_mantener:
+                instance.fotos.exclude(id__in=fotos_a_mantener).delete()
+            else:
+                # If empty list, delete all existing fotos
+                instance.fotos.all().delete()
+                
+        return response
+
+    @action(detail=True, methods=['delete'], url_path='fotos/(?P<foto_id>[^/.]+)')
+    def delete_foto(self, request, pk=None, foto_id=None):
+        """Eliminar una foto específica de una reparación"""
+        try:
+            reparacion = self.get_object()
+            foto = ReparacionFoto.objects.get(id=foto_id, reparacion=reparacion)
+            foto.delete()
+            return Response({'message': 'Foto eliminada correctamente'}, status=200)
+        except ReparacionFoto.DoesNotExist:
+            return Response({'error': 'Foto no encontrada'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['get'], url_path='agrupados')
+    def agrupados(self, request):
+        # Agrupar reparaciones por fecha y localizacion
+        reparaciones = Reparacion.objects.all().select_related('localizacion', 'trabajo')
+        grupos = {}
+        for r in reparaciones:
+            key = (str(r.fecha), r.localizacion.id)
+            if key not in grupos:
+                grupos[key] = {
+                    'fecha': r.fecha,
+                    'localizacion': LocalizacionReparacionSerializer(r.localizacion).data,
+                    'num_reparacion': r.num_reparacion,
+                    'num_pedido': r.num_pedido,
+                    'factura': r.factura.id if r.factura else None,
+                    'factura_numero': r.factura.numero_factura if r.factura else None,
+                    'proforma': r.proforma.id if r.proforma else None,
+                    'proforma_numero': r.proforma.numero_proforma if r.proforma else None,
+                    'trabajos': [],
+                    'reparacion_ids': [],
+                    'comentarios': r.comentarios,
+                }
+            grupos[key]['trabajos'].append(TrabajoSerializer(r.trabajo).data)
+            grupos[key]['reparacion_ids'].append(r.id)
+        # Note: the above return won't include fotos; to include fotos, rebuild response
+        # Agregar fotos por grupo
+        data = []
+        # Para cada grupo, obtener fotos con el serializer para foto_url
+        for group in grupos.values():
+            all_fotos = []
+            for rid in group['reparacion_ids']:
+                fotos_qs = ReparacionFoto.objects.filter(reparacion_id=rid)
+                fotos_serialized = ReparacionFotoSerializer(fotos_qs, many=True, context={'request': request}).data
+                # Incluir tanto el ID como la URL de cada foto
+                for item in fotos_serialized:
+                    if item.get('foto_url'):
+                        all_fotos.append({
+                            'id': item.get('id'),
+                            'foto_url': item['foto_url']
+                        })
+            group['fotos'] = all_fotos
+            data.append(group)
+        return Response(data)
 
 
 class ReparacionFotoViewSet(viewsets.ModelViewSet):

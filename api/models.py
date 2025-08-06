@@ -134,7 +134,6 @@ class Reparacion(models.Model):
     factura = models.ForeignKey(Factura, on_delete=models.SET_NULL, null=True, blank=True)
     proforma = models.ForeignKey(Proforma, on_delete=models.SET_NULL, null=True, blank=True)
     localizacion = models.ForeignKey(LocalizacionReparacion, on_delete=models.CASCADE)
-    trabajo = models.ForeignKey(Trabajo, on_delete=models.CASCADE, null=True, blank=True)
     fecha = models.DateField()
     num_reparacion = models.CharField(max_length=100, null=True, blank=True)
     num_pedido = models.CharField(max_length=100, null=True, blank=True)
@@ -143,7 +142,20 @@ class Reparacion(models.Model):
     def __str__(self):
         factura_str = self.factura.numero_factura if self.factura else "Sin factura"
         proforma_str = self.proforma.numero_proforma if self.proforma else "Sin proforma"
-        return f"{self.trabajo} en factura/proforma {factura_str}/{proforma_str} realizado en {self.localizacion} el {self.fecha}"
+        trabajos_str = ", ".join([tr.trabajo.nombre_reparacion for tr in self.trabajos_reparaciones.all()])
+        return f"{trabajos_str} en factura/proforma {factura_str}/{proforma_str} realizado en {self.localizacion} el {self.fecha}"
+
+
+# Modelo intermedio para relacionar Reparaciones con Trabajos (many-to-many)
+class TrabajosReparaciones(models.Model):
+    reparacion = models.ForeignKey(Reparacion, related_name='trabajos_reparaciones', on_delete=models.CASCADE)
+    trabajo = models.ForeignKey(Trabajo, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('reparacion', 'trabajo')
+
+    def __str__(self):
+        return f"{self.trabajo.nombre_reparacion} - Reparación {self.reparacion.id}"
     
 
 # Modelo para almacenar múltiples fotos de una reparación

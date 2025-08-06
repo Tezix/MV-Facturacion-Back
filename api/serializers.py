@@ -38,17 +38,19 @@ class FacturaSerializer(serializers.ModelSerializer):
         reparaciones = obj.reparacion_set.all()
         total = 0
         for reparacion in reparaciones:
-            # Buscar el precio personalizado para este cliente y trabajo
-            try:
-                trabajo_cliente = TrabajoCliente.objects.get(
-                    cliente=obj.cliente,
-                    trabajo=reparacion.trabajo
-                )
-                total += float(trabajo_cliente.precio)
-            except TrabajoCliente.DoesNotExist:
-                # Si no hay trabajo personalizado, usar el precio del trabajo
-                if reparacion.trabajo and hasattr(reparacion.trabajo, 'precio'):
-                    total += float(reparacion.trabajo.precio or 0)
+            # Obtener todos los trabajos de esta reparación
+            for trabajo_reparacion in reparacion.trabajos_reparaciones.all():
+                # Buscar el precio personalizado para este cliente y trabajo
+                try:
+                    trabajo_cliente = TrabajoCliente.objects.get(
+                        cliente=obj.cliente,
+                        trabajo=trabajo_reparacion.trabajo
+                    )
+                    total += float(trabajo_cliente.precio)
+                except TrabajoCliente.DoesNotExist:
+                    # Si no hay trabajo personalizado, usar el precio del trabajo
+                    if trabajo_reparacion.trabajo and hasattr(trabajo_reparacion.trabajo, 'precio'):
+                        total += float(trabajo_reparacion.trabajo.precio or 0)
         return total
 
     def get_cliente_nombre(self, obj):
@@ -88,17 +90,19 @@ class ProformaSerializer(serializers.ModelSerializer):
         reparaciones = obj.reparacion_set.all()
         total = 0
         for reparacion in reparaciones:
-            # Buscar el precio personalizado para este cliente y trabajo
-            try:
-                trabajo_cliente = TrabajoCliente.objects.get(
-                    cliente=obj.cliente,
-                    trabajo=reparacion.trabajo
-                )
-                total += float(trabajo_cliente.precio)
-            except TrabajoCliente.DoesNotExist:
-                # Si no hay trabajo personalizado, usar el precio del trabajo
-                if reparacion.trabajo and hasattr(reparacion.trabajo, 'precio'):
-                    total += float(reparacion.trabajo.precio or 0)
+            # Obtener todos los trabajos de esta reparación
+            for trabajo_reparacion in reparacion.trabajos_reparaciones.all():
+                # Buscar el precio personalizado para este cliente y trabajo
+                try:
+                    trabajo_cliente = TrabajoCliente.objects.get(
+                        cliente=obj.cliente,
+                        trabajo=trabajo_reparacion.trabajo
+                    )
+                    total += float(trabajo_cliente.precio)
+                except TrabajoCliente.DoesNotExist:
+                    # Si no hay trabajo personalizado, usar el precio del trabajo
+                    if trabajo_reparacion.trabajo and hasattr(trabajo_reparacion.trabajo, 'precio'):
+                        total += float(trabajo_reparacion.trabajo.precio or 0)
         return total
 
     def get_cliente_nombre(self, obj):
@@ -163,11 +167,23 @@ class ReparacionFotoSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(url) if request else url
         return None
 
+class TrabajosReparacionesSerializer(serializers.ModelSerializer):
+    trabajo = TrabajoSerializer(read_only=True)
+    trabajo_id = serializers.PrimaryKeyRelatedField(
+        queryset=Trabajo.objects.all(),
+        source='trabajo',
+        write_only=True
+    )
+
+    class Meta:
+        model = TrabajosReparaciones
+        fields = ['id', 'trabajo', 'trabajo_id']
+
 class ReparacionSerializer(serializers.ModelSerializer):
     # Permitir formatos de fecha personalizados (dd/MM/yyyy y ISO)
     fecha = serializers.DateField(input_formats=['%d/%m/%Y', 'iso-8601'])
     localizacion = LocalizacionReparacionSerializer(read_only=True)
-    trabajo = TrabajoSerializer(read_only=True)
+    trabajos_reparaciones = TrabajosReparacionesSerializer(many=True, read_only=True)
     fotos = ReparacionFotoSerializer(many=True, read_only=True)
     localizacion_id = serializers.PrimaryKeyRelatedField(
         queryset=LocalizacionReparacion.objects.all(),
@@ -175,16 +191,17 @@ class ReparacionSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
-    trabajo_id = serializers.PrimaryKeyRelatedField(
-        queryset=Trabajo.objects.all(),
-        source='trabajo',
+    trabajos = serializers.ListField(
+        child=serializers.IntegerField(),
         write_only=True,
-        required=False
+        required=False,
+        help_text="Lista de IDs de trabajos"
     )
     comentarios = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    
     class Meta:
         model = Reparacion
         fields = '__all__'
-        extra_fields = ['localizacion_id', 'trabajo_id', 'comentarios', 'fotos']
+        extra_fields = ['localizacion_id', 'trabajos', 'comentarios', 'fotos', 'trabajos_reparaciones']
         # Para que DRF acepte los campos *_id en POST/PUT
         read_only_fields = []

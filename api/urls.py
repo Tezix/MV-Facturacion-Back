@@ -11,6 +11,7 @@ router.register(r'localizaciones_reparaciones', LocalizacionReparacionViewSet)
 router.register(r'trabajos', TrabajoViewSet)
 router.register(r'trabajos_clientes', TrabajoClienteViewSet)
 router.register(r'reparaciones', ReparacionViewSet)
+router.register(r'reparacion-fotos', ReparacionFotoViewSet)
 router.register(r'gastos', GastoViewSet)
 
 urlpatterns = [
