@@ -1,23 +1,33 @@
-# fly.toml app configuration file generated for onlypizzas on 2023-08-18T10:41:10+02:00
+# fly.toml app configuration file generated for mvfacturacion on 2025-08-07T15:42:31+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = "mvfacturacion"
-primary_region = "mad"
+app = 'mvfacturacion'
+primary_region = 'cdg'
+console_command = '/code/manage.py shell'
 
 [build]
-  # Use the official Python buildpack
-  buildpacks = ["heroku/python"]
+
+[deploy]
+  release_command = 'python manage.py migrate --noinput'
 
 [env]
-  PORT = "8080"
-  PYTHONUNBUFFERED = "1"
+  PORT = '8000'
 
 [http_service]
-  internal_port = 8080
+  internal_port = 8000
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[[statics]]
+  guest_path = '/code/static'
+  url_prefix = '/static/'
