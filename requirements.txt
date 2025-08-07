@@ -20,10 +20,3 @@ tinyhtml5==2.0.0
 weasyprint==66.0
 webencodings==0.5.1
 zopfli==0.2.3.post1
-asgiref==3.9.1
-Django==4.2.23
-django-cors-headers==4.7.0
-djangorestframework==3.16.0
-psycopg2-binary==2.9.10
-python-dotenv==1.1.1
-sqlparse==0.5.3
