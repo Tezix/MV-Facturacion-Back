@@ -2,6 +2,7 @@ import os
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+# Auto-deploy test - último update: 07/08/2025
 # Endpoint para exponer los choices de tipo y estado de Gasto
 @api_view(['GET'])
 def gasto_choices(request):
